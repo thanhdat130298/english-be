@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String       @id @default(uuid())
+  username     String       @unique
+  passwordHash String
+
+  vocabularies Vocabulary[]
+  wordlists    Wordlist[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DictionaryCache {
+  id     String @id @default(uuid())
+  word   String @unique // normalized word (e.g. "hello")
+  data   Json   // full response array from https://api.dictionaryapi.dev/api/v2/entries/en/<word>
+  createdAt DateTime @default(now())
+
+  @@index([word])
+}
+
+model TranslationCache {
+  id                String   @id @default(uuid())
+  normalizedText    String
+  sourceLang        String?
+  targetLang        String
+  translatedText    String
+  detectedSourceLang String?
+  provider          String   @default("deepl")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([normalizedText, sourceLang, targetLang])
+  @@index([normalizedText])
+}
+
+model Vocabulary {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  word      String
+  meaning   String
+  example   String?
+  sourceText String?
+
+  wordlistItems WordlistItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Wordlist {
+  id          String @id @default(uuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+
+  items WordlistItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model WordlistItem {
+  wordlistId   String
+  vocabularyId String
+
+  wordlist   Wordlist   @relation(fields: [wordlistId], references: [id], onDelete: Cascade)
+  vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([wordlistId, vocabularyId])
+  @@index([vocabularyId])
+}
