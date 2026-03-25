@@ -27,7 +27,7 @@ NestJS + Prisma + PostgreSQL backend for a personal English learning app (Sprint
 
 - Auth (username/password, JWT, bcrypt)
 - Translation (DeepL + DB cache)
-- Vocabulary (user-owned CRUD)
+- Vocabulary learning (`/api/vocab`: SRS-style review, review queue, archive; derived `isNew` / `isDue` / `isMastered`)
 - Wordlists (group vocabulary)
 - Progress (basic stats)
 
@@ -59,6 +59,13 @@ Required for translation endpoint:
 $ npx prisma migrate deploy
 ```
 
+## API base path
+
+All REST routes are under **`/api`** (e.g. `POST /api/auth/login`, `GET /api/vocab`).  
+Swagger UI: **`/api/swagger`**.
+
+**Frontend integration (endpoints, query/body, types, errors):** see [`docs/frontend-integration.md`](docs/frontend-integration.md).
+
 ## Compile and run the project
 
 ```bash
@@ -71,6 +78,17 @@ $ npm run start:dev
 # production mode
 $ npm run start:prod
 ```
+
+### Troubleshooting (`Cannot find module './app.module'` in watch mode)
+
+If `npm run start:dev` crashes right after “File change detected”, the `dist/` folder may be incomplete (race when clearing output). **Stop the process**, then run:
+
+```bash
+npm run build:clean
+npm run start:dev
+```
+
+`nest-cli.json` uses `deleteOutDir: false` in watch mode to reduce this. For a completely clean build, use `build:clean`.
 
 ## Run tests
 

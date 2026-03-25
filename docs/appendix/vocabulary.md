@@ -1,34 +1,28 @@
-# Appendix — Vocabulary
+# Appendix — Vocabulary & learning
 
 ## Purpose
 
-Allow a user to store and manage vocabulary items (word/phrase + meaning + example + source text) for later learning flows.
+Lưu từ/cụm + nghĩa cho từng user; hỗ trợ **ôn tập** (review), **hàng đợi due**, **archive** (soft delete), và **dictionary** từ Free Dictionary API (cache).
 
-## Files/modules involved (planned)
+## Files/modules
 
 - `src/vocabulary/vocabulary.module.ts`
-- `src/vocabulary/vocabulary.controller.ts`
+- `src/vocabulary/vocabulary.controller.ts` — `@Controller(['api/vocab', 'vocabulary'])`
 - `src/vocabulary/vocabulary.service.ts`
-- `src/vocabulary/dto/create-vocabulary.dto.ts`
-- `src/vocabulary/dto/update-vocabulary.dto.ts`
-- `src/vocabulary/dto/list-vocabulary.query.dto.ts` (optional; Sprint 1 minimal)
+- `src/vocabulary/vocab-derivation.ts` — `isNew` / `isDue` / `isMastered`
+- `src/vocabulary/vocab-learning-defaults.ts` — `nextReviewAt` ban đầu, bước SRS
+- `src/vocabulary/dto/*.ts`
 
-## Data models involved
+## Data model (Prisma)
 
-- `Vocabulary`
+- `Vocabulary`: `word`, `meaning`, `example`, `sourceText`, `difficulty`, `reviewCount`, `correctCount`, `lastReviewedAt`, `nextReviewAt`, `isArchived`, …
 
-## APIs involved (planned)
+## APIs (tóm tắt)
 
-- `POST /vocabulary`
-- `GET /vocabulary`
-- `GET /vocabulary/:id`
-- `PATCH /vocabulary/:id`
-- `DELETE /vocabulary/:id`
+- List / CRUD / review / archive / review-queue — xem `docs/sample-requests/vocabulary.md` và `vocab-learning.md`.
 
-## Notes for future extensions
+## Notes / mở rộng sau
 
-- **Flashcards/SRS**: add fields like `nextReviewAt`, `easeFactor`, `intervalDays`.
-- **Audio/IPA**: add pronunciation fields and TTS integrations.
-- **Tagging**: add many-to-many tags.
-
-
+- Full SRS (SM-2, ease factor): có thể mở rộng từ `nextReviewAt` + `difficulty` hiện tại.
+- Audio / IPA: thêm field hoặc link từ `dictionary`.
+- Phân quyền admin: endpoint `DELETE /admin/data` hiện chỉ cần JWT.

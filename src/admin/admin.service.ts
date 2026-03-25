@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Delete all data except User (WordlistItem, Wordlist, Vocabulary, TranslationCache, DictionaryCache). */
+  /** Delete all data except User (WordlistItem, Wordlist, Vocabulary, TranslationCache, DictionaryCache, Feedback). */
   async clearDataExceptUsers(): Promise<{
     deleted: true;
     counts: Record<string, number>;
@@ -16,12 +16,14 @@ export class AdminService {
       vocabulary,
       translationCache,
       dictionaryCache,
+      feedback,
     ] = await this.prisma.$transaction([
       this.prisma.wordlistItem.deleteMany(),
       this.prisma.wordlist.deleteMany(),
       this.prisma.vocabulary.deleteMany(),
       this.prisma.translationCache.deleteMany(),
       this.prisma.dictionaryCache.deleteMany(),
+      this.prisma.feedback.deleteMany(),
     ]);
 
     return {
@@ -32,6 +34,7 @@ export class AdminService {
         vocabulary: vocabulary.count,
         translationCache: translationCache.count,
         dictionaryCache: dictionaryCache.count,
+        feedback: feedback.count,
       },
     };
   }

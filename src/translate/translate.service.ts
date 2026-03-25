@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { initialVocabularyLearningFields } from '../vocabulary/vocab-learning-defaults';
 import { TranslateDto } from './dto/translate.dto';
 
 const DICTIONARY_API_BASE = 'https://api.dictionaryapi.dev/api/v2/entries/en';
@@ -31,7 +32,36 @@ export type DictionaryEntry = {
       antonyms?: string[];
     }>;
   }>;
+  [key: string]: unknown;
 };
+
+/** Last path segment of URL (e.g. "high" from ".../wiki/high"). */
+function lastPathSegment(urlStr: string): string {
+  try {
+    const pathname = new URL(urlStr).pathname;
+    const segments = pathname.split('/').filter(Boolean);
+    const last = segments[segments.length - 1];
+    return last ? decodeURIComponent(last).toLowerCase() : '';
+  } catch {
+    return '';
+  }
+}
+
+/** Keep only entries that match the input word. Exclude homographs (e.g. "high" when searching "hi") using sourceUrls. */
+function filterDictionaryForWord(
+  entries: DictionaryEntry[] | null,
+  word: string,
+): DictionaryEntry[] | null {
+  if (!entries?.length) return entries;
+  const normalized = word.trim().toLowerCase();
+  const filtered = entries.filter((e) => {
+    if ((e.word ?? '').trim().toLowerCase() !== normalized) return false;
+    const urls = e.sourceUrls as string[] | undefined;
+    if (!urls?.length) return true;
+    return urls.every((url) => lastPathSegment(url) === normalized);
+  });
+  return filtered.length > 0 ? filtered : entries;
+}
 
 type TranslateResponse = {
   text: string;
@@ -123,7 +153,8 @@ export class TranslateService {
         detectedSourceLang: cached.detectedSourceLang ?? undefined,
         translatedText: cached.translatedText,
         cached: true,
-        dictionary: dictionary ?? undefined,
+        dictionary:
+          filterDictionaryForWord(dictionary, normalizedText) ?? undefined,
       };
       return this.maybeSaveVocabulary(userId, dto, base);
     }
@@ -214,17 +245,27 @@ export class TranslateService {
               'translatedText is too long to store as Vocabulary.meaning (max 512). Save manually via /vocabulary instead.',
             );
           }
-          const vocab = await tx.vocabulary.create({
-            data: {
-              userId,
-              word,
-              meaning,
-              example: dto.vocabularyExample ?? null,
-              sourceText: dto.vocabularySourceText ?? null,
-            },
+          const existing = await tx.vocabulary.findFirst({
+            where: { userId, word: { equals: word, mode: 'insensitive' } },
             select: { id: true },
           });
-          vocabularyId = vocab.id;
+          if (existing) {
+            vocabularyId = existing.id;
+          } else {
+            const init = initialVocabularyLearningFields();
+            const vocab = await tx.vocabulary.create({
+              data: {
+                userId,
+                word,
+                meaning,
+                example: dto.vocabularyExample ?? null,
+                sourceText: dto.vocabularySourceText ?? null,
+                ...init,
+              },
+              select: { id: true },
+            });
+            vocabularyId = vocab.id;
+          }
         }
 
         return {
@@ -244,7 +285,8 @@ export class TranslateService {
         detectedSourceLang: createdCache.detectedSourceLang ?? undefined,
         translatedText: createdCache.translatedText,
         cached: false,
-        dictionary: dictionary ?? undefined,
+        dictionary:
+          filterDictionaryForWord(dictionary, normalizedText) ?? undefined,
         vocabulary: vocabId ? { id: vocabId } : undefined,
       };
       return base;
@@ -262,7 +304,8 @@ export class TranslateService {
             detectedSourceLang: reread.detectedSourceLang ?? undefined,
             translatedText: reread.translatedText,
             cached: true,
-            dictionary: dictionary ?? undefined,
+            dictionary:
+              filterDictionaryForWord(dictionary, normalizedText) ?? undefined,
           };
           return this.maybeSaveVocabulary(userId, dto, base);
         }
@@ -287,7 +330,6 @@ export class TranslateService {
       );
     }
 
-    // By default we use translatedText as the meaning.
     const meaning = base.translatedText;
     if (meaning.length > 512) {
       throw new BadRequestException(
@@ -295,6 +337,15 @@ export class TranslateService {
       );
     }
 
+    const existing = await this.prisma.vocabulary.findFirst({
+      where: { userId, word: { equals: word, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (existing) {
+      return { ...base, vocabulary: { id: existing.id } };
+    }
+
+    const init = initialVocabularyLearningFields();
     const created = await this.prisma.vocabulary.create({
       data: {
         userId,
@@ -302,6 +353,7 @@ export class TranslateService {
         meaning,
         example: dto.vocabularyExample ?? null,
         sourceText: dto.vocabularySourceText ?? null,
+        ...init,
       },
       select: { id: true },
     });

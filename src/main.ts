@@ -7,6 +7,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // All routes under /api (matches typical Vite proxy: /api -> backend)
+  app.setGlobalPrefix('api');
+
   // Enable CORS for frontend access
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? true, // Allow all origins in dev, or specify comma-separated list
@@ -27,7 +30,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('English Learning API')
     .setDescription(
-      'Sprint 1 backend (Auth, Translate, Vocabulary, Wordlists, Progress)',
+      'English learning API: Auth, Translate, Vocabulary learning (SRS-style review), Wordlists, Progress',
     )
     .setVersion('1.0.0')
     .addBearerAuth()

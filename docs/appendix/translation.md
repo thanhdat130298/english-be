@@ -1,14 +1,16 @@
-# Appendix — Translation (DeepL + cache)
+# Appendix — Translation (DeepL + cache + dictionary)
 
 ## Purpose
 
-Translate **1 word, phrase, or sentence** server-side using DeepL; reuse cached translations from PostgreSQL; optionally save the result as a Vocabulary item for the authenticated user.
+Dịch **từ / cụm / cây** từ **tiếng Anh** sang `targetLang` (DeepL); cache **TranslationCache**; cache **DictionaryCache** từ Free Dictionary API; tùy chọn **lưu Vocabulary** với trạng thái learning ban đầu.
 
 ## Behaviour
 
-- **Input**: `text` (word/phrase/sentence) + `targetLang` (+ optional `sourceLang`, `saveToVocabulary`, `vocabularyWord`, `vocabularyExample`, `vocabularySourceText`).
-- **Cache**: Global `TranslationCache` by (normalizedText, sourceLang, targetLang). No user data in cache.
-- **Save to Vocabulary**: If `saveToVocabulary=true`, a `Vocabulary` row is created: `word` = `vocabularyWord` or `text` (must be ≤128 chars), `meaning` = translated text.
+- **Input**: `text`, `targetLang`, và tùy chọn `saveToVocabulary`, `vocabularyWord`, `vocabularyExample`, `vocabularySourceText`.
+- **Source language**: luôn EN trong service (không nhận `sourceLang` từ client cho luồng dịch chính).
+- **Dictionary**: `GET https://api.dictionaryapi.dev/api/v2/entries/en/<word>` → cache; response trả về mảng đã **lọc** theo đúng từ (tránh homograph như “hi” vs “high”).
+- **Translation cache**: theo `normalizedText` + `sourceLang` + `targetLang` (và tương thích bản cũ `sourceLang` null).
+- **Save to Vocabulary**: khi bật, upsert theo `userId` + word (case-insensitive); record mới có `reviewCount`, `correctCount`, `nextReviewAt` theo `vocab-learning-defaults`.
 
 ## Files involved
 
@@ -16,20 +18,18 @@ Translate **1 word, phrase, or sentence** server-side using DeepL; reuse cached 
 - `src/translate/translate.controller.ts`
 - `src/translate/translate.service.ts`
 - `src/translate/dto/translate.dto.ts`
+- `src/vocabulary/vocab-learning-defaults.ts` (khi tạo vocab từ translate)
 
-## Data models involved
+## Data models
 
-- `TranslationCache` (global cache)
-- `Vocabulary` (user-owned, when saveToVocabulary=true)
+- `TranslationCache`, `DictionaryCache`, `Vocabulary`
 
-## APIs involved
+## API
 
-- `POST /translate` (JWT required)
+- `POST /translate` (JWT)
 
-## Notes for future extensions
+## Future extensions
 
-- **Provider abstraction**: support Gemini translate or alternative providers behind interface.
-- **Advanced DeepL options**: formal/informal, glossary, context parameters.
-- **Rate limiting**: per-user quotas to protect API spend.
-
-
+- Provider abstraction (Gemini, v.v.)
+- Rate limiting per user
+- DeepL glossary / formality

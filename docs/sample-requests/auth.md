@@ -1,5 +1,8 @@
 ## Auth
 
+**FE note:** flow đổi mật khẩu dùng modal gồm `currentPassword`, `newPassword`, `confirmPassword`, submit bằng nút **Update Password**.  
+Nút **Reset Password** đang tạm ẩn trên UI.
+
 ### GET /auth/me
 
 Requires JWT.

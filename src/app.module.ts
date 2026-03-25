@@ -3,6 +3,7 @@ import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { TranslateModule } from './translate/translate.module';
 import { VocabularyModule } from './vocabulary/vocabulary.module';
@@ -14,6 +15,7 @@ import { ProgressModule } from './progress/progress.module';
     PrismaModule,
     AuthModule,
     TranslateModule,
+    FeedbackModule,
     VocabularyModule,
     WordlistsModule,
     ProgressModule,

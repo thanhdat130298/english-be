@@ -20,7 +20,7 @@ export class AdminController {
   @ApiOperation({
     summary: 'Clear all data except users',
     description:
-      'Deletes all rows from WordlistItem, Wordlist, Vocabulary, TranslationCache, DictionaryCache. User table is not modified.',
+      'Deletes all rows from WordlistItem, Wordlist, Vocabulary, TranslationCache, DictionaryCache, Feedback. User table is not modified.',
   })
   @ApiResponse({
     status: 200,

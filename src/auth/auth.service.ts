@@ -8,10 +8,13 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 type AuthTokenResponse = {
   accessToken: string;
 };
+
+const DEFAULT_RESET_PASSWORD = 'Password1234%';
 
 @Injectable()
 export class AuthService {
@@ -81,5 +84,43 @@ export class AuthService {
         username: user.username,
       }),
     };
+  }
+
+  async updatePassword(
+    userId: string,
+    dto: UpdatePasswordDto,
+  ): Promise<{ updated: true }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('invalid token user');
+    }
+
+    const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedException('current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return { updated: true };
+  }
+
+  async resetPasswordToDefault(userId: string): Promise<{ updated: true }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('invalid token user');
+    }
+
+    const passwordHash = await bcrypt.hash(DEFAULT_RESET_PASSWORD, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return { updated: true };
   }
 }
